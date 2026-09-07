@@ -1,0 +1,247 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Bricolage Grotesque", "Nunito Sans", sans-serif;
+  --font-body: "Nunito Sans", "Segoe UI", sans-serif;
+  --font-hand: "Caveat", cursive;
+
+  --color-paper: #f5f4ee;
+  --color-hoja: #fffdf6;
+  --color-ink: #26303b;
+  --color-inksoft: #5d6874;
+  --color-inkfaint: #8b95a1;
+  --color-linea: #dde1e4;
+  --color-pizarra: #123f35;
+  --color-pizbrd: #1c5546;
+  --color-pizdark: #0b2a23;
+  --color-tiza: #e9f2ec;
+  --color-lapiz: #ffc531;
+  --color-lapizdeep: #e8a90f;
+  --color-birome: #d8483f;
+  --color-domi: #0e7c66;
+  --color-hosp: #2f6fb2;
+  --color-hogar: #d97e12;
+  --color-otro: #64718a;
+
+  --shadow-ficha: 0 1px 0 rgba(38, 48, 59, 0.05), 0 12px 26px -16px rgba(38, 48, 59, 0.3);
+  --shadow-nota: 0 14px 24px -14px rgba(38, 48, 59, 0.4);
+  --shadow-tab: 0 -2px 0 rgba(255, 255, 255, 0.06) inset, 0 14px 30px -18px rgba(11, 42, 35, 0.9);
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  background-color: var(--color-paper);
+  /* cuadriculado de cuaderno */
+  background-image:
+    radial-gradient(900px 420px at 85% -10%, rgba(255, 197, 49, 0.14), transparent 60%),
+    radial-gradient(800px 500px at -10% 110%, rgba(14, 124, 102, 0.1), transparent 60%),
+    linear-gradient(rgba(47, 111, 178, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(47, 111, 178, 0.06) 1px, transparent 1px);
+  background-size: auto, auto, 26px 26px, 26px 26px;
+  background-attachment: fixed;
+}
+
+::selection {
+  background: rgba(255, 197, 49, 0.55);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #c3c9cd;
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #a9b2b9;
+  background-clip: content-box;
+  border: 3px solid transparent;
+}
+
+/* ---------- componentes de "papel" ---------- */
+
+.ficha {
+  background: var(--color-hoja);
+  border: 1px solid var(--color-linea);
+  border-radius: 10px;
+  box-shadow: var(--shadow-ficha);
+  transition: transform 0.22s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.22s;
+}
+.ficha:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 2px 0 rgba(38, 48, 59, 0.05), 0 20px 34px -16px rgba(38, 48, 59, 0.35);
+}
+
+.nota {
+  position: relative;
+  border-radius: 4px 14px 10px 12px;
+  box-shadow: var(--shadow-nota);
+  transition: transform 0.22s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.22s;
+}
+.nota:hover {
+  transform: translateY(-4px) rotate(0deg) !important;
+  box-shadow: 0 22px 34px -16px rgba(38, 48, 59, 0.45);
+}
+.nota::before {
+  content: "";
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  width: 92px;
+  height: 24px;
+  transform: translateX(-50%) rotate(-2deg);
+  background: linear-gradient(180deg, rgba(255, 236, 170, 0.9), rgba(255, 224, 130, 0.75));
+  border: 1px dashed rgba(160, 120, 20, 0.28);
+  border-radius: 3px;
+  box-shadow: 0 2px 4px rgba(38, 48, 59, 0.12);
+}
+
+.ruled {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 26px,
+    rgba(47, 111, 178, 0.12) 26px,
+    rgba(47, 111, 178, 0.12) 27px
+  );
+}
+
+.chalk-underline {
+  background-image: linear-gradient(
+    100deg,
+    transparent 0 2%,
+    rgba(255, 197, 49, 0.85) 2% 98%,
+    transparent 98%
+  );
+  background-repeat: no-repeat;
+  background-size: 100% 0.42em;
+  background-position: 0 88%;
+  padding: 0 0.08em;
+}
+
+.pizarra-texture {
+  background-image:
+    radial-gradient(600px 300px at 20% 0%, rgba(255, 255, 255, 0.05), transparent 60%),
+    radial-gradient(500px 400px at 90% 100%, rgba(255, 255, 255, 0.04), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.015) 0 2px, transparent 2px 4px);
+}
+
+.input-base {
+  width: 100%;
+  background: #fff;
+  border: 1.5px solid var(--color-linea);
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.9rem;
+  color: var(--color-ink);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.input-base:focus {
+  outline: none;
+  border-color: var(--color-domi);
+  box-shadow: 0 0 0 3px rgba(14, 124, 102, 0.15);
+}
+.input-base::placeholder {
+  color: var(--color-inkfaint);
+}
+
+/* ---------- animaciones ---------- */
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--rot, 0deg));
+  }
+  50% {
+    transform: translateY(-7px) rotate(var(--rot, 0deg));
+  }
+}
+@keyframes tick-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(14, 124, 102, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 9px rgba(14, 124, 102, 0);
+  }
+}
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2.5deg);
+  }
+}
+
+.anim-fade-up {
+  animation: fade-up 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.anim-pop {
+  animation: pop-in 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.anim-float {
+  animation: float-soft 5s ease-in-out infinite;
+}
+.anim-tick {
+  animation: tick-pulse 0.6s ease-out;
+}
+.anim-wiggle:hover {
+  animation: wiggle 0.35s ease-in-out;
+}
+
+.delay-1 {
+  animation-delay: 0.06s;
+}
+.delay-2 {
+  animation-delay: 0.12s;
+}
+.delay-3 {
+  animation-delay: 0.18s;
+}
+.delay-4 {
+  animation-delay: 0.24s;
+}
+.delay-5 {
+  animation-delay: 0.3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-fade-up,
+  .anim-pop,
+  .anim-float,
+  .anim-wiggle:hover {
+    animation: none;
+  }
+}

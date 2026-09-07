@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📁 Restaurar Carpeta Didáctica</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f4ee;
+      color: #26303b;
+      line-height: 1.6;
+    }
+    .header {
+      text-align: center;
+      padding: 40px 20px;
+      background: linear-gradient(135deg, #123f35 0%, #1c5546 100%);
+      color: white;
+      border-radius: 16px;
+      margin-bottom: 30px;
+    }
+    .header h1 {
+      font-size: 2.5em;
+      margin: 0 0 10px 0;
+    }
+    .header p {
+      font-size: 1.1em;
+      opacity: 0.9;
+      margin: 0;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    .card h2 {
+      color: #123f35;
+      margin-top: 0;
+      font-size: 1.5em;
+    }
+    .btn {
+      display: inline-block;
+      background: #123f35;
+      color: white;
+      text-decoration: none;
+      padding: 14px 32px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 8px;
+      transition: all 0.2s;
+      margin: 5px;
+    }
+    .btn:hover {
+      background: #0b2a23;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    }
+    .btn-secondary {
+      background: #2f6fb2;
+    }
+    .btn-secondary:hover {
+      background: #1e5a9e;
+    }
+    .warning {
+      background: #ffc531;
+      color: #26303b;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-weight: bold;
+    }
+    .success {
+      background: #0e7c66;
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .steps {
+      background: #f5f4ee;
+      padding: 25px;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+    .steps h3 {
+      color: #123f35;
+      margin-top: 0;
+    }
+    .steps ol {
+      margin: 15px 0;
+      padding-left: 25px;
+    }
+    .steps li {
+      margin: 12px 0;
+      color: #5d6874;
+    }
+    .steps code {
+      background: white;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      color: #123f35;
+      font-size: 0.9em;
+    }
+    .steps a {
+      color: #2f6fb2;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .steps a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📁 Restaurar Carpeta Didáctica</h1>
+    <p>Guía para restaurar el repositorio y publicar el sitio</p>
+  </div>
+
+  <div class="card">
+    <h2>✅ Estado Actual</h2>
+    <div class="success">
+      <strong>✓ El proyecto está completo y funcionando</strong><br>
+      Todos los archivos del proyecto están listos en este entorno y compilan correctamente.
+    </div>
+    <p>El Pull Request #1 ya contiene todo el código del proyecto, pero fue <strong>cerrado sin fusionar</strong>.</p>
+  </div>
+
+  <div class="card">
+    <h2>🚀 Opción 1: Fusionar el PR (Más Rápido)</h2>
+    <p>Esta es la forma más rápida de restaurar el repositorio:</p>
+    <div class="steps">
+      <ol>
+        <li>Andá a <a href="https://github.com/profelili/carpetadidactica/pull/1" target="_blank">Pull Request #1</a></li>
+        <li>Si está cerrado, buscá el botón <strong>"Reopen pull request"</strong> y tocalo</li>
+        <li>Ahora debería aparecer el botón verde <strong>"Merge pull request"</strong></li>
+        <li>Tocá <strong>"Merge pull request"</strong> → <strong>"Confirm merge"</strong></li>
+        <li>Esperá 1-2 minutos</li>
+        <li>Andá a <strong>Settings → Pages → Source: GitHub Actions</strong></li>
+        <li>Esperá a que el workflow termine con ✅</li>
+        <li>Tu sitio estará en <code>https://profelili.github.io/carpetadidactica</code></li>
+      </ol>
+    </div>
+    <div style="text-align: center; margin-top: 20px;">
+      <a href="https://github.com/profelili/carpetadidactica/pull/1" target="_blank" class="btn">
+        Ir al Pull Request #1
+      </a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📦 Opción 2: Subir Manualmente</h2>
+    <p>Si preferís subir los archivos manualmente o el PR no se puede reabrir:</p>
+    
+    <div class="warning">
+      ⚠️ IMPORTANTE: Antes de subir, borrá los archivos viejos del repo (index.tar, static.yml, etc.)
+    </div>
+
+    <div class="steps">
+      <h3>Pasos:</h3>
+      <ol>
+        <li>Descargá el proyecto desde este entorno (si hay botón de descarga disponible)</li>
+        <li>Descomprimí el archivo en tu computadora</li>
+        <li>Andá a <a href="https://github.com/profelili/carpetadidactica" target="_blank">tu repositorio en GitHub</a></li>
+        <li>Borrá los archivos viejos: <code>index.tar</code>, <code>static.yml</code> (si existen)</li>
+        <li>Hacé clic en <strong>Add file → Upload files</strong></li>
+        <li>Arrastrá <strong>TODO el contenido</strong> de la carpeta del proyecto:
+          <ul>
+            <li>La carpeta <code>.github</code> (¡muy importante!)</li>
+            <li>La carpeta <code>src</code></li>
+            <li>Todos los archivos: <code>index.html</code>, <code>package.json</code>, <code>README.md</code>, etc.</li>
+          </ul>
+        </li>
+        <li>Hacé clic en <strong>Commit changes</strong></li>
+        <li>Andá a <strong>Settings → Pages → Source: GitHub Actions</strong></li>
+        <li>Esperá 1-2 minutos hasta que el workflow termine con ✅</li>
+        <li>Tu sitio estará en <code>https://profelili.github.io/carpetadidactica</code></li>
+      </ol>
+    </div>
+    <div style="text-align: center; margin-top: 20px;">
+      <a href="https://github.com/profelili/carpetadidactica" target="_blank" class="btn btn-secondary">
+        Ir al Repositorio
+      </a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📋 Contenido del Proyecto</h2>
+    <p>El proyecto incluye:</p>
+    <ul>
+      <li><strong>Código fuente completo</strong> (carpeta <code>src/</code>)</li>
+      <li><strong>Configuración</strong>: Vite, TypeScript, Tailwind CSS</li>
+      <li><strong>Workflow de GitHub Pages</strong> (<code>.github/workflows/deploy.yml</code>)</li>
+      <li><strong>README</strong> con instrucciones</li>
+      <li><strong>.gitignore</strong> configurado</li>
+    </ul>
+    <p><strong>Características de la aplicación:</strong></p>
+    <ul>
+      <li>Panel de control con botones para diferentes modalidades de alumnos</li>
+      <li>Base de datos de alumnos con filtros y buscador</li>
+      <li>Planificador de actividades por fecha y modalidad</li>
+      <li>Exportación a archivos .doc (compatibles con Word y Google Docs)</li>
+      <li>Sistema de respaldo y restauración mediante archivos JSON</li>
+      <li>Diseño temático de carpeta escolar con pizarrón y cuaderno</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>❓ ¿Necesitás Ayuda?</h2>
+    <p>Si tenés problemas para restaurar el repositorio:</p>
+    <ul>
+      <li>Verificá que estés logueado en GitHub con la cuenta <code>profelili</code></li>
+      <li>Si el PR #1 no se puede reabrir, usá la Opción 2 (subida manual)</li>
+      <li>Asegurate de que la carpeta <code>.github</code> se suba correctamente</li>
+      <li>En Settings → Pages, seleccioná <strong>GitHub Actions</strong> como fuente</li>
+    </ul>
+  </div>
+</body>
+</html>
