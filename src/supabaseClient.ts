@@ -22,9 +22,30 @@ try {
 
 export const supabase = supabaseInstance;
 
-// Función para verificar si Supabase está disponible
-export function isSupabaseAvailable(): boolean {
-  return supabaseInstance !== null;
+// Función para verificar si Supabase está disponible (prueba real de conexión)
+export async function isSupabaseAvailable(): Promise<boolean> {
+  if (!supabaseInstance) {
+    console.log('❌ Cliente Supabase no inicializado');
+    return false;
+  }
+  
+  try {
+    // Intentar hacer una consulta simple para verificar la conexión
+    const { error } = await supabaseInstance
+      .from('alumnos')
+      .select('count', { count: 'exact', head: true });
+    
+    if (error) {
+      console.log('❌ Error conectando a Supabase:', error.message);
+      return false;
+    }
+    
+    console.log('✅ Conexión a Supabase verificada');
+    return true;
+  } catch (error) {
+    console.log('❌ Excepción conectando a Supabase:', error);
+    return false;
+  }
 }
 
 // Tipos para TypeScript

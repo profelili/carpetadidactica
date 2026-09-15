@@ -78,13 +78,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // Verificar si Supabase está disponible
   useEffect(() => {
-    const available = isSupabaseAvailable();
-    setUsandoSupabase(available);
-    if (available) {
-      console.log('✅ Supabase disponible');
-    } else {
-      console.log('ℹ️ Usando localStorage (Supabase no disponible)');
-    }
+    const verificarSupabase = async () => {
+      const available = await isSupabaseAvailable();
+      setUsandoSupabase(available);
+      if (available) {
+        console.log('✅ Supabase disponible y conectado');
+      } else {
+        console.log('ℹ️ Usando localStorage (Supabase no disponible)');
+      }
+    };
+    verificarSupabase();
   }, []);
 
   // Cargar datos desde Supabase al iniciar
