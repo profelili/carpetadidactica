@@ -87,7 +87,7 @@ function Shell() {
       <div className="pointer-events-none fixed inset-y-0 left-[286px] z-10 hidden w-px bg-birome/25 lg:block" />
       <div className="pointer-events-none fixed inset-y-0 left-[290px] z-10 hidden w-px bg-birome/15 lg:block" />
 
-      <div className="flex min-h-screen flex-1 flex-col">
+      <div className="flex min-h-screen flex-1 flex-col lg:ml-[286px]">
         {/* barra superior */}
         <header className="sticky top-0 z-30 border-b border-linea/80 bg-paper/85 backdrop-blur-md">
           <div className="mx-auto flex w-full max-w-[1180px] items-center gap-3 px-4 py-3 sm:px-8 lg:pl-12">
@@ -125,7 +125,7 @@ function Shell() {
         </main>
 
         <footer className="border-t border-linea/70">
-          <div className="mx-auto flex w-full max-w-[1180px] flex-wrap items-center justify-between gap-3 px-4 py-4 text-[12px] font-bold text-inkfaint sm:px-8 lg:pl-12">
+          <div className="mx-auto flex w-full max-w-[1180px] flex-wrap items-center justify-between gap-3 px-4 py-4 text-[12px] font-bold text-inkfaint sm:px-8">
             <p>
               <span className="font-display font-extrabold text-inksoft">Carpeta Didáctica</span> — hecha
               para docentes de modalidades especiales.
