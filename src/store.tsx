@@ -75,6 +75,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [usandoSupabase, setUsandoSupabase] = useState(false);
   const firstRun = useRef(true);
   const supabaseReady = useRef(false);
+  const datosInicialesSubidos = useRef(false);
 
   // Verificar si Supabase está disponible
   useEffect(() => {
@@ -90,14 +91,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     verificarSupabase();
   }, []);
 
-  // Función para subir datos a Supabase
-  const subirDatosASupabase = async (datos: DB) => {
+  // Función para subir datos a Supabase (solo cambios incrementales)
+  const subirDatosASupabase = async (datos: DB, esInicial: boolean = false) => {
     if (!usandoSupabase || !supabase) return;
 
     try {
       // Subir alumnos
       if (datos.alumnos.length > 0) {
         const alumnosParaSubir = datos.alumnos.map(a => ({
+          id: a.id,
           nombre: a.nombre,
           apellido: a.apellido,
           dni: a.dni || null,
@@ -112,7 +114,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           observaciones: a.observaciones || null,
         }));
 
-        const { error } = await supabase.from('alumnos').insert(alumnosParaSubir);
+        const { error } = await supabase.from('alumnos').upsert(alumnosParaSubir, { onConflict: 'id' });
         if (error) {
           console.warn('Error subiendo alumnos:', error);
           return;
@@ -122,6 +124,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // Subir actividades
       if (datos.actividades.length > 0) {
         const actividadesParaSubir = datos.actividades.map(a => ({
+          id: a.id,
           titulo: a.titulo,
           fecha: a.fecha,
           hora: a.hora || null,
@@ -135,7 +138,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           realizada: a.realizada,
         }));
 
-        const { error } = await supabase.from('actividades').insert(actividadesParaSubir);
+        const { error } = await supabase.from('actividades').upsert(actividadesParaSubir, { onConflict: 'id' });
         if (error) {
           console.warn('Error subiendo actividades:', error);
           return;
@@ -222,10 +225,56 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           setDb(dbDesdeSupabase);
           saveLocal(dbDesdeSupabase);
           console.log('✅ Datos cargados desde Supabase');
-        } else {
+        } else if (!datosInicialesSubidos.current) {
           console.log('ℹ️ Supabase vacío, subiendo datos locales...');
+          datosInicialesSubidos.current = true;
+          
           // Subir datos locales a Supabase
-          await subirDatosASupabase(db);
+          await subirDatosASupabase(db, true);
+          
+          // Recargar datos desde Supabase para obtener los IDs correctos
+          console.log('🔄 Recargando datos desde Supabase...');
+          const { data: alumnosRecargados } = await supabase.from('alumnos').select('*');
+          const { data: actividadesRecargadas } = await supabase.from('actividades').select('*');
+          
+          if (alumnosRecargados && alumnosRecargados.length > 0) {
+            const dbDesdeSupabase: DB = {
+              alumnos: alumnosRecargados.map((a: any) => ({
+                id: a.id,
+                nombre: a.nombre,
+                apellido: a.apellido,
+                dni: a.dni,
+                categoria: a.categoria,
+                escuelaOrigen: a.escuela_origen,
+                grado: a.grado,
+                establecimiento: a.establecimiento,
+                tutor: a.tutor,
+                estado: a.estado,
+                fechaAlta: a.fecha_alta,
+                diagnostico: a.diagnostico,
+                observaciones: a.observaciones,
+              })),
+              actividades: actividadesRecargadas?.map((a: any) => ({
+                id: a.id,
+                titulo: a.titulo,
+                fecha: a.fecha,
+                hora: a.hora,
+                categoria: a.categoria,
+                alumnoIds: a.alumno_ids || [],
+                area: a.area,
+                duracion: a.duracion,
+                objetivo: a.objetivo,
+                consignas: a.consignas,
+                recursos: a.recursos,
+                realizada: a.realizada,
+              })) || [],
+              docente: 'Prof. Liliana Álvarez',
+            };
+            
+            setDb(dbDesdeSupabase);
+            saveLocal(dbDesdeSupabase);
+            console.log('✅ Datos recargados desde Supabase con IDs correctos');
+          }
         }
         
         supabaseReady.current = true;
@@ -397,3 +446,4 @@ export function useStore(): StoreValue {
   if (!v) throw new Error("useStore debe usarse dentro de StoreProvider");
   return v;
 }
+
