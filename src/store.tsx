@@ -1,3 +1,7 @@
+--- src/store.tsx (原始)
+
+
++++ src/store.tsx (修改后)
 import {
   createContext,
   useCallback,
@@ -73,294 +77,41 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [guardando, setGuardando] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
   const [usandoSupabase, setUsandoSupabase] = useState(false);
+
+  // Refs para controlar el flujo de sincronización
   const firstRun = useRef(true);
   const supabaseReady = useRef(false);
-  const datosInicialesSubidos = useRef(false);
-  const dbAnterior = useRef<DB | null>(null);
+  const cargandoDesdeSupabase = useRef(false); // 🔥 NUEVO: Evita bucle infinito
 
   // Verificar si Supabase está disponible
   useEffect(() => {
-    const verificarSupabase = async () => {
-      const available = await isSupabaseAvailable();
-      setUsandoSupabase(available);
-      if (available) {
-        console.log('✅ Supabase disponible y conectado');
-      } else {
-        console.log('ℹ️ Usando localStorage (Supabase no disponible)');
-      }
-    };
-    verificarSupabase();
+    const available = isSupabaseAvailable();
+    setUsandoSupabase(available);
+    if (available) {
+      console.log('✅ Supabase disponible');
+    } else {
+      console.log('ℹ️ Usando localStorage (Supabase no disponible)');
+    }
   }, []);
 
-  // Función para subir datos a Supabase (solo cambios incrementales)
-  const subirDatosASupabase = async (datos: DB, esInicial: boolean = false) => {
-    if (!usandoSupabase || !supabase) return;
-
-    try {
-      // Si es la primera vez, subir todo
-      if (esInicial || !dbAnterior.current) {
-        console.log('📤 Subiendo datos iniciales a Supabase...');
-        
-        // Subir alumnos
-        if (datos.alumnos.length > 0) {
-          const alumnosParaSubir = datos.alumnos.map(a => ({
-            nombre: a.nombre,
-            apellido: a.apellido,
-            dni: a.dni || null,
-            categoria: a.categoria,
-            escuela_origen: a.escuelaOrigen,
-            grado: a.grado,
-            establecimiento: a.establecimiento,
-            tutor: a.tutor || null,
-            estado: a.estado,
-            fecha_alta: a.fechaAlta,
-            diagnostico: a.diagnostico || null,
-            observaciones: a.observaciones || null,
-          }));
-
-          const { data: alumnosInsertados, error } = await supabase.from('alumnos').insert(alumnosParaSubir).select();
-          if (error) {
-            console.warn('Error subiendo alumnos:', error);
-            return;
-          }
-          
-          // Actualizar IDs locales con los de Supabase
-          if (alumnosInsertados) {
-            const alumnosConIds = datos.alumnos.map((a, i) => ({
-              ...a,
-              id: alumnosInsertados[i]?.id || a.id
-            }));
-            setDb(prev => ({ ...prev, alumnos: alumnosConIds }));
-            console.log('✅ IDs de alumnos actualizados desde Supabase');
-          }
-        }
-
-        // Subir actividades
-        if (datos.actividades.length > 0) {
-          const actividadesParaSubir = datos.actividades.map(a => ({
-            titulo: a.titulo,
-            fecha: a.fecha,
-            hora: a.hora || null,
-            categoria: a.categoria,
-            alumno_ids: a.alumnoIds || [],
-            area: a.area,
-            duracion: a.duracion || null,
-            objetivo: a.objetivo || null,
-            consignas: a.consignas,
-            recursos: a.recursos || null,
-            realizada: a.realizada,
-          }));
-
-          const { data: actividadesInsertadas, error } = await supabase.from('actividades').insert(actividadesParaSubir).select();
-          if (error) {
-            console.warn('Error subiendo actividades:', error);
-            return;
-          }
-          
-          // Actualizar IDs locales con los de Supabase
-          if (actividadesInsertadas) {
-            const actividadesConIds = datos.actividades.map((a, i) => ({
-              ...a,
-              id: actividadesInsertadas[i]?.id || a.id
-            }));
-            setDb(prev => ({ ...prev, actividades: actividadesConIds }));
-            console.log('✅ IDs de actividades actualizados desde Supabase');
-          }
-        }
-
-        console.log('✅ Datos iniciales subidos a Supabase');
-        return;
-      }
-
-      // Sincronización incremental: comparar cambios
-      const anterior = dbAnterior.current;
-      
-      // Detectar alumnos nuevos, modificados y eliminados
-      const alumnosNuevos = datos.alumnos.filter(a => !anterior.alumnos.some(pa => pa.id === a.id));
-      const alumnosModificados = datos.alumnos.filter(a => {
-        const pa = anterior.alumnos.find(pa => pa.id === a.id);
-        return pa && JSON.stringify(pa) !== JSON.stringify(a);
-      });
-      const alumnosEliminados = anterior.alumnos.filter(pa => !datos.alumnos.some(a => a.id === pa.id));
-
-      // Subir alumnos nuevos
-      if (alumnosNuevos.length > 0) {
-        console.log(`📤 Subiendo ${alumnosNuevos.length} alumno(s) nuevo(s)...`);
-        const alumnosParaSubir = alumnosNuevos.map(a => ({
-          nombre: a.nombre,
-          apellido: a.apellido,
-          dni: a.dni || null,
-          categoria: a.categoria,
-          escuela_origen: a.escuelaOrigen,
-          grado: a.grado,
-          establecimiento: a.establecimiento,
-          tutor: a.tutor || null,
-          estado: a.estado,
-          fecha_alta: a.fechaAlta,
-          diagnostico: a.diagnostico || null,
-          observaciones: a.observaciones || null,
-        }));
-
-        const { data: alumnosInsertados, error } = await supabase.from('alumnos').insert(alumnosParaSubir).select();
-        if (error) {
-          console.warn('Error subiendo alumnos nuevos:', error);
-        } else if (alumnosInsertados) {
-          // Actualizar IDs locales
-          const alumnosConIds = datos.alumnos.map(a => {
-            const nuevo = alumnosNuevos.find(n => n.id === a.id);
-            if (nuevo) {
-              const insertado = alumnosInsertados.find(ins => 
-                ins.nombre === nuevo.nombre && ins.apellido === nuevo.apellido
-              );
-              return insertado ? { ...a, id: insertado.id } : a;
-            }
-            return a;
-          });
-          setDb(prev => ({ ...prev, alumnos: alumnosConIds }));
-          console.log('✅ Alumnos nuevos subidos y IDs actualizados');
-        }
-      }
-
-      // Actualizar alumnos modificados
-      if (alumnosModificados.length > 0) {
-        console.log(`📝 Actualizando ${alumnosModificados.length} alumno(s)...`);
-        for (const a of alumnosModificados) {
-          const { error } = await supabase.from('alumnos').update({
-            nombre: a.nombre,
-            apellido: a.apellido,
-            dni: a.dni || null,
-            categoria: a.categoria,
-            escuela_origen: a.escuelaOrigen,
-            grado: a.grado,
-            establecimiento: a.establecimiento,
-            tutor: a.tutor || null,
-            estado: a.estado,
-            fecha_alta: a.fechaAlta,
-            diagnostico: a.diagnostico || null,
-            observaciones: a.observaciones || null,
-          }).eq('id', a.id);
-          
-          if (error) {
-            console.warn(`Error actualizando alumno ${a.id}:`, error);
-          }
-        }
-        console.log('✅ Alumnos modificados actualizados');
-      }
-
-      // Eliminar alumnos eliminados
-      if (alumnosEliminados.length > 0) {
-        console.log(`🗑️ Eliminando ${alumnosEliminados.length} alumno(s)...`);
-        for (const a of alumnosEliminados) {
-          const { error } = await supabase.from('alumnos').delete().eq('id', a.id);
-          if (error) {
-            console.warn(`Error eliminando alumno ${a.id}:`, error);
-          }
-        }
-        console.log('✅ Alumnos eliminados');
-      }
-
-      // Detectar actividades nuevas, modificadas y eliminadas
-      const actividadesNuevas = datos.actividades.filter(a => !anterior.actividades.some(pa => pa.id === a.id));
-      const actividadesModificadas = datos.actividades.filter(a => {
-        const pa = anterior.actividades.find(pa => pa.id === a.id);
-        return pa && JSON.stringify(pa) !== JSON.stringify(a);
-      });
-      const actividadesEliminadas = anterior.actividades.filter(pa => !datos.actividades.some(a => a.id === pa.id));
-
-      // Subir actividades nuevas
-      if (actividadesNuevas.length > 0) {
-        console.log(`📤 Subiendo ${actividadesNuevas.length} actividad(es) nueva(s)...`);
-        const actividadesParaSubir = actividadesNuevas.map(a => ({
-          titulo: a.titulo,
-          fecha: a.fecha,
-          hora: a.hora || null,
-          categoria: a.categoria,
-          alumno_ids: a.alumnoIds || [],
-          area: a.area,
-          duracion: a.duracion || null,
-          objetivo: a.objetivo || null,
-          consignas: a.consignas,
-          recursos: a.recursos || null,
-          realizada: a.realizada,
-        }));
-
-        const { data: actividadesInsertadas, error } = await supabase.from('actividades').insert(actividadesParaSubir).select();
-        if (error) {
-          console.warn('Error subiendo actividades nuevas:', error);
-        } else if (actividadesInsertadas) {
-          // Actualizar IDs locales
-          const actividadesConIds = datos.actividades.map(a => {
-            const nueva = actividadesNuevas.find(n => n.id === a.id);
-            if (nueva) {
-              const insertada = actividadesInsertadas.find(ins => 
-                ins.titulo === nueva.titulo && ins.fecha === nueva.fecha
-              );
-              return insertada ? { ...a, id: insertada.id } : a;
-            }
-            return a;
-          });
-          setDb(prev => ({ ...prev, actividades: actividadesConIds }));
-          console.log('✅ Actividades nuevas subidas y IDs actualizados');
-        }
-      }
-
-      // Actualizar actividades modificadas
-      if (actividadesModificadas.length > 0) {
-        console.log(`📝 Actualizando ${actividadesModificadas.length} actividad(es)...`);
-        for (const a of actividadesModificadas) {
-          const { error } = await supabase.from('actividades').update({
-            titulo: a.titulo,
-            fecha: a.fecha,
-            hora: a.hora || null,
-            categoria: a.categoria,
-            alumno_ids: a.alumnoIds || [],
-            area: a.area,
-            duracion: a.duracion || null,
-            objetivo: a.objetivo || null,
-            consignas: a.consignas,
-            recursos: a.recursos || null,
-            realizada: a.realizada,
-          }).eq('id', a.id);
-          
-          if (error) {
-            console.warn(`Error actualizando actividad ${a.id}:`, error);
-          }
-        }
-        console.log('✅ Actividades modificadas actualizadas');
-      }
-
-      // Eliminar actividades eliminadas
-      if (actividadesEliminadas.length > 0) {
-        console.log(`🗑️ Eliminando ${actividadesEliminadas.length} actividad(es)...`);
-        for (const a of actividadesEliminadas) {
-          const { error } = await supabase.from('actividades').delete().eq('id', a.id);
-          if (error) {
-            console.warn(`Error eliminando actividad ${a.id}:`, error);
-          }
-        }
-        console.log('✅ Actividades eliminadas');
-      }
-
-    } catch (error) {
-      console.error('❌ Error subiendo a Supabase:', error);
-    }
-  };
-
-  // Cargar datos desde Supabase al iniciar
+  // 🔥 CORREGIDO: Cargar datos desde Supabase al iniciar (solo una vez)
   useEffect(() => {
     if (!usandoSupabase || supabaseReady.current) return;
     if (!supabase) {
       console.warn('Supabase no está disponible');
       return;
     }
-    
+
     const cargarDesdeSupabase = async () => {
       if (!supabase) return;
+
+      cargandoDesdeSupabase.current = true; // 🔥 Marcar que estamos cargando
       setSincronizando(true);
+
       try {
-        console.log('🔄 Cargando datos desde Supabase...');
-        
-        // SIEMPRE cargar desde Supabase primero
+        console.log('📥 Cargando datos desde Supabase...');
+
+        // Cargar alumnos
         const { data: alumnosData, error: alumnosError } = await supabase
           .from('alumnos')
           .select('*')
@@ -369,9 +120,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (alumnosError) {
           console.warn('Error cargando alumnos:', alumnosError);
           setSincronizando(false);
+          cargandoDesdeSupabase.current = false;
           return;
         }
 
+        // Cargar actividades
         const { data: actividadesData, error: actividadesError } = await supabase
           .from('actividades')
           .select('*')
@@ -380,13 +133,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (actividadesError) {
           console.warn('Error cargando actividades:', actividadesError);
           setSincronizando(false);
+          cargandoDesdeSupabase.current = false;
           return;
         }
 
-        // Si Supabase tiene datos, usar ESOS datos (fuente de verdad)
+        // Si hay datos en Supabase, usarlos
         if (alumnosData && alumnosData.length > 0) {
-          console.log(`✅ Supabase tiene ${alumnosData.length} alumnos, usándolos como fuente de verdad`);
-          
+          console.log(`✅ ${alumnosData.length} alumnos encontrados en Supabase`);
+
           const dbDesdeSupabase: DB = {
             alumnos: alumnosData.map((a: any) => ({
               id: a.id,
@@ -419,85 +173,112 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             })) || [],
             docente: 'Prof. Liliana Álvarez',
           };
-          
-          // Usar datos de Supabase y actualizar localStorage
+
           setDb(dbDesdeSupabase);
           saveLocal(dbDesdeSupabase);
-          dbAnterior.current = dbDesdeSupabase;
-          console.log('✅ Datos de Supabase cargados y localStorage actualizado');
-        } else if (!datosInicialesSubidos.current) {
-          // Supabase está vacío, subir datos locales UNA SOLA VEZ
-          console.log('ℹ️ Supabase vacío, subiendo datos locales (primera vez)...');
-          datosInicialesSubidos.current = true;
-          
-          // Subir datos locales a Supabase
-          await subirDatosASupabase(db, true);
-          
-          // IMPORTANTE: Recargar desde Supabase para obtener los IDs correctos
-          console.log('🔄 Recargando datos desde Supabase después de subir...');
-          const { data: alumnosRecargados } = await supabase.from('alumnos').select('*');
-          const { data: actividadesRecargadas } = await supabase.from('actividades').select('*');
-          
-          if (alumnosRecargados && alumnosRecargados.length > 0) {
-            const dbDesdeSupabase: DB = {
-              alumnos: alumnosRecargados.map((a: any) => ({
-                id: a.id,
-                nombre: a.nombre,
-                apellido: a.apellido,
-                dni: a.dni,
-                categoria: a.categoria,
-                escuelaOrigen: a.escuela_origen,
-                grado: a.grado,
-                establecimiento: a.establecimiento,
-                tutor: a.tutor,
-                estado: a.estado,
-                fechaAlta: a.fecha_alta,
-                diagnostico: a.diagnostico,
-                observaciones: a.observaciones,
-              })),
-              actividades: actividadesRecargadas?.map((a: any) => ({
-                id: a.id,
-                titulo: a.titulo,
-                fecha: a.fecha,
-                hora: a.hora,
-                categoria: a.categoria,
-                alumnoIds: a.alumno_ids || [],
-                area: a.area,
-                duracion: a.duracion,
-                objetivo: a.objetivo,
-                consignas: a.consignas,
-                recursos: a.recursos,
-                realizada: a.realizada,
-              })) || [],
-              docente: 'Prof. Liliana Álvarez',
-            };
-            
-            // Usar datos de Supabase con IDs correctos
-            setDb(dbDesdeSupabase);
-            saveLocal(dbDesdeSupabase);
-            dbAnterior.current = dbDesdeSupabase;
-            console.log('✅ Datos recargados desde Supabase con IDs correctos');
-          }
+          console.log('✅ Datos cargados desde Supabase');
+        } else {
+          console.log('ℹ️ Supabase vacío, usando datos locales');
         }
-        
+
         supabaseReady.current = true;
       } catch (error) {
         console.error('❌ Error cargando desde Supabase:', error);
       } finally {
         setSincronizando(false);
+        // 🔥 IMPORTANTE: Esperar un poco antes de desmarcar para evitar race conditions
+        setTimeout(() => {
+          cargandoDesdeSupabase.current = false;
+        }, 1000);
       }
     };
 
     cargarDesdeSupabase();
-  }, [usandoSupabase, supabase]);
+  }, [usandoSupabase]);
 
-  // Guardado automático en localStorage + sincronización con Supabase
+  // 🔥 CORREGIDO: Función para subir datos a Supabase (sin bucle)
+  const subirDatosASupabase = async (datos: DB) => {
+    // 🔥 Evitar subir si estamos cargando desde Supabase
+    if (cargandoDesdeSupabase.current) {
+      console.log('⏸️ Sincronización pausada: cargando desde Supabase');
+      return;
+    }
+
+    if (!usandoSupabase || !supabase) return;
+
+    try {
+      console.log('📤 Sincronizando con Supabase...');
+
+      // Subir alumnos
+      if (datos.alumnos.length > 0) {
+        const alumnosParaSubir = datos.alumnos.map(a => ({
+          id: a.id,
+          nombre: a.nombre,
+          apellido: a.apellido,
+          dni: a.dni,
+          categoria: a.categoria,
+          escuela_origen: a.escuelaOrigen,
+          grado: a.grado,
+          establecimiento: a.establecimiento,
+          tutor: a.tutor,
+          estado: a.estado,
+          fecha_alta: a.fechaAlta,
+          diagnostico: a.diagnostico,
+          observaciones: a.observaciones,
+        }));
+
+        const { error } = await supabase.from('alumnos').upsert(alumnosParaSubir);
+        if (error) {
+          console.warn('Error subiendo alumnos:', error);
+          return;
+        }
+        console.log(`✅ ${alumnosParaSubir.length} alumnos sincronizados`);
+      }
+
+      // Subir actividades
+      if (datos.actividades.length > 0) {
+        const actividadesParaSubir = datos.actividades.map(a => ({
+          id: a.id,
+          titulo: a.titulo,
+          fecha: a.fecha,
+          hora: a.hora,
+          categoria: a.categoria,
+          alumno_ids: a.alumnoIds,
+          area: a.area,
+          duracion: a.duracion,
+          objetivo: a.objetivo,
+          consignas: a.consignas,
+          recursos: a.recursos,
+          realizada: a.realizada,
+        }));
+
+        const { error } = await supabase.from('actividades').upsert(actividadesParaSubir);
+        if (error) {
+          console.warn('Error subiendo actividades:', error);
+          return;
+        }
+        console.log(`✅ ${actividadesParaSubir.length} actividades sincronizadas`);
+      }
+
+      console.log('✅ Sincronización completa');
+    } catch (error) {
+      console.error('❌ Error subiendo a Supabase:', error);
+    }
+  };
+
+  // 🔥 CORREGIDO: Guardado automático (sin bucle infinito)
   useEffect(() => {
     if (firstRun.current) {
       firstRun.current = false;
-      dbAnterior.current = db;
       return;
     }
+
+    // 🔥 No guardar si estamos cargando desde Supabase
+    if (cargandoDesdeSupabase.current) {
+      console.log('⏸️ Guardado automático pausado: cargando desde Supabase');
+      return;
+    }
+
     setGuardando(true);
     const t = setTimeout(async () => {
       saveLocal(db);
@@ -505,14 +286,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSavedAt(`${`${now.getHours()}`.padStart(2, "0")}:${`${now.getMinutes()}`.padStart(2, "0")}`);
       setGuardando(false);
 
-      // Sincronizar con Supabase si está disponible
-      if (usandoSupabase && supabaseReady.current) {
+      // 🔥 Solo sincronizar si Supabase está listo y no estamos cargando
+      if (usandoSupabase && supabaseReady.current && !cargandoDesdeSupabase.current) {
         setSincronizando(true);
         await subirDatosASupabase(db);
-        dbAnterior.current = db;
         setSincronizando(false);
       }
-    }, 420);
+    }, 1000); // 🔥 Aumentado a 1 segundo para evitar múltiples triggers
+
     return () => clearTimeout(t);
   }, [db, usandoSupabase]);
 
@@ -560,7 +341,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const fresh = seedDB();
         setDb(fresh);
         saveLocal(fresh);
-        if (usandoSupabase) {
+        if (usandoSupabase && !cargandoDesdeSupabase.current) {
           subirDatosASupabase(fresh);
         }
       },
@@ -580,7 +361,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         };
         setDb(dbImportada);
         saveLocal(dbImportada);
-        if (usandoSupabase) {
+        if (usandoSupabase && !cargandoDesdeSupabase.current) {
           subirDatosASupabase(dbImportada);
         }
         toast("Respaldo restaurado correctamente");
@@ -591,10 +372,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return;
         }
         setSincronizando(true);
+        cargandoDesdeSupabase.current = true;
         try {
           const { data: alumnosData } = await supabase.from('alumnos').select('*');
           const { data: actividadesData } = await supabase.from('actividades').select('*');
-          
+
           if (alumnosData && actividadesData) {
             const dbDesdeSupabase: DB = {
               alumnos: alumnosData.map((a: any) => ({
@@ -637,6 +419,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           toast("Error al sincronizar", "warn");
         } finally {
           setSincronizando(false);
+          setTimeout(() => {
+            cargandoDesdeSupabase.current = false;
+          }, 1000);
         }
       },
     }),
