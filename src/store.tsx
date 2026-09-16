@@ -98,22 +98,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // Subir alumnos
       if (datos.alumnos.length > 0) {
         const alumnosParaSubir = datos.alumnos.map(a => ({
-          id: a.id,
           nombre: a.nombre,
           apellido: a.apellido,
-          dni: a.dni,
+          dni: a.dni || null,
           categoria: a.categoria,
           escuela_origen: a.escuelaOrigen,
           grado: a.grado,
           establecimiento: a.establecimiento,
-          tutor: a.tutor,
+          tutor: a.tutor || null,
           estado: a.estado,
           fecha_alta: a.fechaAlta,
-          diagnostico: a.diagnostico,
-          observaciones: a.observaciones,
+          diagnostico: a.diagnostico || null,
+          observaciones: a.observaciones || null,
         }));
 
-        const { error } = await supabase.from('alumnos').upsert(alumnosParaSubir);
+        const { error } = await supabase.from('alumnos').insert(alumnosParaSubir);
         if (error) {
           console.warn('Error subiendo alumnos:', error);
           return;
@@ -123,21 +122,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // Subir actividades
       if (datos.actividades.length > 0) {
         const actividadesParaSubir = datos.actividades.map(a => ({
-          id: a.id,
           titulo: a.titulo,
           fecha: a.fecha,
-          hora: a.hora,
+          hora: a.hora || null,
           categoria: a.categoria,
-          alumno_ids: a.alumnoIds,
+          alumno_ids: a.alumnoIds || [],
           area: a.area,
-          duracion: a.duracion,
-          objetivo: a.objetivo,
+          duracion: a.duracion || null,
+          objetivo: a.objetivo || null,
           consignas: a.consignas,
-          recursos: a.recursos,
+          recursos: a.recursos || null,
           realizada: a.realizada,
         }));
 
-        const { error } = await supabase.from('actividades').upsert(actividadesParaSubir);
+        const { error } = await supabase.from('actividades').insert(actividadesParaSubir);
         if (error) {
           console.warn('Error subiendo actividades:', error);
           return;
