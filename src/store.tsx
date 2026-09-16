@@ -358,7 +358,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!supabase) return;
       setSincronizando(true);
       try {
-        // Cargar alumnos
+        console.log('🔄 Cargando datos desde Supabase...');
+        
+        // SIEMPRE cargar desde Supabase primero
         const { data: alumnosData, error: alumnosError } = await supabase
           .from('alumnos')
           .select('*')
@@ -370,7 +372,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // Cargar actividades
         const { data: actividadesData, error: actividadesError } = await supabase
           .from('actividades')
           .select('*')
@@ -382,8 +383,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // Si hay datos en Supabase, usarlos
+        // Si Supabase tiene datos, usar ESOS datos (fuente de verdad)
         if (alumnosData && alumnosData.length > 0) {
+          console.log(`✅ Supabase tiene ${alumnosData.length} alumnos, usándolos como fuente de verdad`);
+          
           const dbDesdeSupabase: DB = {
             alumnos: alumnosData.map((a: any) => ({
               id: a.id,
@@ -417,18 +420,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             docente: 'Prof. Liliana Álvarez',
           };
           
+          // Usar datos de Supabase y actualizar localStorage
           setDb(dbDesdeSupabase);
           saveLocal(dbDesdeSupabase);
-          console.log('✅ Datos cargados desde Supabase');
+          dbAnterior.current = dbDesdeSupabase;
+          console.log('✅ Datos de Supabase cargados y localStorage actualizado');
         } else if (!datosInicialesSubidos.current) {
-          console.log('ℹ️ Supabase vacío, subiendo datos locales...');
+          // Supabase está vacío, subir datos locales UNA SOLA VEZ
+          console.log('ℹ️ Supabase vacío, subiendo datos locales (primera vez)...');
           datosInicialesSubidos.current = true;
           
           // Subir datos locales a Supabase
           await subirDatosASupabase(db, true);
           
-          // Recargar datos desde Supabase para obtener los IDs correctos
-          console.log('🔄 Recargando datos desde Supabase...');
+          // IMPORTANTE: Recargar desde Supabase para obtener los IDs correctos
+          console.log('🔄 Recargando datos desde Supabase después de subir...');
           const { data: alumnosRecargados } = await supabase.from('alumnos').select('*');
           const { data: actividadesRecargadas } = await supabase.from('actividades').select('*');
           
@@ -466,8 +472,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               docente: 'Prof. Liliana Álvarez',
             };
             
+            // Usar datos de Supabase con IDs correctos
             setDb(dbDesdeSupabase);
             saveLocal(dbDesdeSupabase);
+            dbAnterior.current = dbDesdeSupabase;
             console.log('✅ Datos recargados desde Supabase con IDs correctos');
           }
         }
