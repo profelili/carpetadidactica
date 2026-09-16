@@ -76,6 +76,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const firstRun = useRef(true);
   const supabaseReady = useRef(false);
   const datosInicialesSubidos = useRef(false);
+  const dbAnterior = useRef<DB | null>(null);
 
   // Verificar si Supabase está disponible
   useEffect(() => {
@@ -96,10 +97,96 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!usandoSupabase || !supabase) return;
 
     try {
-      // Subir alumnos
-      if (datos.alumnos.length > 0) {
-        const alumnosParaSubir = datos.alumnos.map(a => ({
-          id: a.id,
+      // Si es la primera vez, subir todo
+      if (esInicial || !dbAnterior.current) {
+        console.log('📤 Subiendo datos iniciales a Supabase...');
+        
+        // Subir alumnos
+        if (datos.alumnos.length > 0) {
+          const alumnosParaSubir = datos.alumnos.map(a => ({
+            nombre: a.nombre,
+            apellido: a.apellido,
+            dni: a.dni || null,
+            categoria: a.categoria,
+            escuela_origen: a.escuelaOrigen,
+            grado: a.grado,
+            establecimiento: a.establecimiento,
+            tutor: a.tutor || null,
+            estado: a.estado,
+            fecha_alta: a.fechaAlta,
+            diagnostico: a.diagnostico || null,
+            observaciones: a.observaciones || null,
+          }));
+
+          const { data: alumnosInsertados, error } = await supabase.from('alumnos').insert(alumnosParaSubir).select();
+          if (error) {
+            console.warn('Error subiendo alumnos:', error);
+            return;
+          }
+          
+          // Actualizar IDs locales con los de Supabase
+          if (alumnosInsertados) {
+            const alumnosConIds = datos.alumnos.map((a, i) => ({
+              ...a,
+              id: alumnosInsertados[i]?.id || a.id
+            }));
+            setDb(prev => ({ ...prev, alumnos: alumnosConIds }));
+            console.log('✅ IDs de alumnos actualizados desde Supabase');
+          }
+        }
+
+        // Subir actividades
+        if (datos.actividades.length > 0) {
+          const actividadesParaSubir = datos.actividades.map(a => ({
+            titulo: a.titulo,
+            fecha: a.fecha,
+            hora: a.hora || null,
+            categoria: a.categoria,
+            alumno_ids: a.alumnoIds || [],
+            area: a.area,
+            duracion: a.duracion || null,
+            objetivo: a.objetivo || null,
+            consignas: a.consignas,
+            recursos: a.recursos || null,
+            realizada: a.realizada,
+          }));
+
+          const { data: actividadesInsertadas, error } = await supabase.from('actividades').insert(actividadesParaSubir).select();
+          if (error) {
+            console.warn('Error subiendo actividades:', error);
+            return;
+          }
+          
+          // Actualizar IDs locales con los de Supabase
+          if (actividadesInsertadas) {
+            const actividadesConIds = datos.actividades.map((a, i) => ({
+              ...a,
+              id: actividadesInsertadas[i]?.id || a.id
+            }));
+            setDb(prev => ({ ...prev, actividades: actividadesConIds }));
+            console.log('✅ IDs de actividades actualizados desde Supabase');
+          }
+        }
+
+        console.log('✅ Datos iniciales subidos a Supabase');
+        return;
+      }
+
+      // Sincronización incremental: comparar cambios
+      const anterior = dbAnterior.current;
+      
+      // Detectar alumnos nuevos, modificados y eliminados
+      const alumnosNuevos = datos.alumnos.filter(a => !anterior.alumnos.some(pa => pa.id === a.id));
+      const alumnosModificados = datos.alumnos.filter(a => {
+        const pa = anterior.alumnos.find(pa => pa.id === a.id);
+        return pa && JSON.stringify(pa) !== JSON.stringify(a);
+      });
+      const alumnosEliminados = anterior.alumnos.filter(pa => !datos.alumnos.some(a => a.id === pa.id));
+
+      // Subir alumnos nuevos
+      if (alumnosNuevos.length > 0) {
+        console.log(`📤 Subiendo ${alumnosNuevos.length} alumno(s) nuevo(s)...`);
+        const alumnosParaSubir = alumnosNuevos.map(a => ({
           nombre: a.nombre,
           apellido: a.apellido,
           dni: a.dni || null,
@@ -114,17 +201,76 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           observaciones: a.observaciones || null,
         }));
 
-        const { error } = await supabase.from('alumnos').upsert(alumnosParaSubir, { onConflict: 'id' });
+        const { data: alumnosInsertados, error } = await supabase.from('alumnos').insert(alumnosParaSubir).select();
         if (error) {
-          console.warn('Error subiendo alumnos:', error);
-          return;
+          console.warn('Error subiendo alumnos nuevos:', error);
+        } else if (alumnosInsertados) {
+          // Actualizar IDs locales
+          const alumnosConIds = datos.alumnos.map(a => {
+            const nuevo = alumnosNuevos.find(n => n.id === a.id);
+            if (nuevo) {
+              const insertado = alumnosInsertados.find(ins => 
+                ins.nombre === nuevo.nombre && ins.apellido === nuevo.apellido
+              );
+              return insertado ? { ...a, id: insertado.id } : a;
+            }
+            return a;
+          });
+          setDb(prev => ({ ...prev, alumnos: alumnosConIds }));
+          console.log('✅ Alumnos nuevos subidos y IDs actualizados');
         }
       }
 
-      // Subir actividades
-      if (datos.actividades.length > 0) {
-        const actividadesParaSubir = datos.actividades.map(a => ({
-          id: a.id,
+      // Actualizar alumnos modificados
+      if (alumnosModificados.length > 0) {
+        console.log(`📝 Actualizando ${alumnosModificados.length} alumno(s)...`);
+        for (const a of alumnosModificados) {
+          const { error } = await supabase.from('alumnos').update({
+            nombre: a.nombre,
+            apellido: a.apellido,
+            dni: a.dni || null,
+            categoria: a.categoria,
+            escuela_origen: a.escuelaOrigen,
+            grado: a.grado,
+            establecimiento: a.establecimiento,
+            tutor: a.tutor || null,
+            estado: a.estado,
+            fecha_alta: a.fechaAlta,
+            diagnostico: a.diagnostico || null,
+            observaciones: a.observaciones || null,
+          }).eq('id', a.id);
+          
+          if (error) {
+            console.warn(`Error actualizando alumno ${a.id}:`, error);
+          }
+        }
+        console.log('✅ Alumnos modificados actualizados');
+      }
+
+      // Eliminar alumnos eliminados
+      if (alumnosEliminados.length > 0) {
+        console.log(`🗑️ Eliminando ${alumnosEliminados.length} alumno(s)...`);
+        for (const a of alumnosEliminados) {
+          const { error } = await supabase.from('alumnos').delete().eq('id', a.id);
+          if (error) {
+            console.warn(`Error eliminando alumno ${a.id}:`, error);
+          }
+        }
+        console.log('✅ Alumnos eliminados');
+      }
+
+      // Detectar actividades nuevas, modificadas y eliminadas
+      const actividadesNuevas = datos.actividades.filter(a => !anterior.actividades.some(pa => pa.id === a.id));
+      const actividadesModificadas = datos.actividades.filter(a => {
+        const pa = anterior.actividades.find(pa => pa.id === a.id);
+        return pa && JSON.stringify(pa) !== JSON.stringify(a);
+      });
+      const actividadesEliminadas = anterior.actividades.filter(pa => !datos.actividades.some(a => a.id === pa.id));
+
+      // Subir actividades nuevas
+      if (actividadesNuevas.length > 0) {
+        console.log(`📤 Subiendo ${actividadesNuevas.length} actividad(es) nueva(s)...`);
+        const actividadesParaSubir = actividadesNuevas.map(a => ({
           titulo: a.titulo,
           fecha: a.fecha,
           hora: a.hora || null,
@@ -138,14 +284,63 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           realizada: a.realizada,
         }));
 
-        const { error } = await supabase.from('actividades').upsert(actividadesParaSubir, { onConflict: 'id' });
+        const { data: actividadesInsertadas, error } = await supabase.from('actividades').insert(actividadesParaSubir).select();
         if (error) {
-          console.warn('Error subiendo actividades:', error);
-          return;
+          console.warn('Error subiendo actividades nuevas:', error);
+        } else if (actividadesInsertadas) {
+          // Actualizar IDs locales
+          const actividadesConIds = datos.actividades.map(a => {
+            const nueva = actividadesNuevas.find(n => n.id === a.id);
+            if (nueva) {
+              const insertada = actividadesInsertadas.find(ins => 
+                ins.titulo === nueva.titulo && ins.fecha === nueva.fecha
+              );
+              return insertada ? { ...a, id: insertada.id } : a;
+            }
+            return a;
+          });
+          setDb(prev => ({ ...prev, actividades: actividadesConIds }));
+          console.log('✅ Actividades nuevas subidas y IDs actualizados');
         }
       }
 
-      console.log('✅ Datos subidos a Supabase');
+      // Actualizar actividades modificadas
+      if (actividadesModificadas.length > 0) {
+        console.log(`📝 Actualizando ${actividadesModificadas.length} actividad(es)...`);
+        for (const a of actividadesModificadas) {
+          const { error } = await supabase.from('actividades').update({
+            titulo: a.titulo,
+            fecha: a.fecha,
+            hora: a.hora || null,
+            categoria: a.categoria,
+            alumno_ids: a.alumnoIds || [],
+            area: a.area,
+            duracion: a.duracion || null,
+            objetivo: a.objetivo || null,
+            consignas: a.consignas,
+            recursos: a.recursos || null,
+            realizada: a.realizada,
+          }).eq('id', a.id);
+          
+          if (error) {
+            console.warn(`Error actualizando actividad ${a.id}:`, error);
+          }
+        }
+        console.log('✅ Actividades modificadas actualizadas');
+      }
+
+      // Eliminar actividades eliminadas
+      if (actividadesEliminadas.length > 0) {
+        console.log(`🗑️ Eliminando ${actividadesEliminadas.length} actividad(es)...`);
+        for (const a of actividadesEliminadas) {
+          const { error } = await supabase.from('actividades').delete().eq('id', a.id);
+          if (error) {
+            console.warn(`Error eliminando actividad ${a.id}:`, error);
+          }
+        }
+        console.log('✅ Actividades eliminadas');
+      }
+
     } catch (error) {
       console.error('❌ Error subiendo a Supabase:', error);
     }
@@ -292,6 +487,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (firstRun.current) {
       firstRun.current = false;
+      dbAnterior.current = db;
       return;
     }
     setGuardando(true);
@@ -305,6 +501,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (usandoSupabase && supabaseReady.current) {
         setSincronizando(true);
         await subirDatosASupabase(db);
+        dbAnterior.current = db;
         setSincronizando(false);
       }
     }, 420);
@@ -446,4 +643,3 @@ export function useStore(): StoreValue {
   if (!v) throw new Error("useStore debe usarse dentro de StoreProvider");
   return v;
 }
-
