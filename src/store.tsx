@@ -1,6 +1,6 @@
+// 🔥 NUEVO: Evita bucle infinito
+const cargandoDesdeSupabase = useRef(false);
 --- src/store.tsx (原始)
-
-
 +++ src/store.tsx (修改后)
 import {
   createContext,
