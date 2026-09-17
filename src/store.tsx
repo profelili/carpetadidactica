@@ -1,7 +1,3 @@
-// 🔥 NUEVO: Evita bucle infinito
-const cargandoDesdeSupabase = useRef(false);
---- src/store.tsx (原始)
-+++ src/store.tsx (修改后)
 import {
   createContext,
   useCallback,
@@ -77,7 +73,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [guardando, setGuardando] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
   const [usandoSupabase, setUsandoSupabase] = useState(false);
-
+  
   // Refs para controlar el flujo de sincronización
   const firstRun = useRef(true);
   const supabaseReady = useRef(false);
@@ -101,17 +97,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       console.warn('Supabase no está disponible');
       return;
     }
-
+    
     const cargarDesdeSupabase = async () => {
       if (!supabase) return;
-
+      
       cargandoDesdeSupabase.current = true; // 🔥 Marcar que estamos cargando
       setSincronizando(true);
-
+      
       try {
         console.log('📥 Cargando datos desde Supabase...');
-
-        // Cargar alumnos
+        
         const { data: alumnosData, error: alumnosError } = await supabase
           .from('alumnos')
           .select('*')
@@ -124,7 +119,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // Cargar actividades
         const { data: actividadesData, error: actividadesError } = await supabase
           .from('actividades')
           .select('*')
@@ -137,10 +131,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // Si hay datos en Supabase, usarlos
         if (alumnosData && alumnosData.length > 0) {
           console.log(`✅ ${alumnosData.length} alumnos encontrados en Supabase`);
-
+          
           const dbDesdeSupabase: DB = {
             alumnos: alumnosData.map((a: any) => ({
               id: a.id,
@@ -173,20 +166,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             })) || [],
             docente: 'Prof. Liliana Álvarez',
           };
-
+          
           setDb(dbDesdeSupabase);
           saveLocal(dbDesdeSupabase);
           console.log('✅ Datos cargados desde Supabase');
         } else {
           console.log('ℹ️ Supabase vacío, usando datos locales');
         }
-
+        
         supabaseReady.current = true;
       } catch (error) {
         console.error('❌ Error cargando desde Supabase:', error);
       } finally {
         setSincronizando(false);
-        // 🔥 IMPORTANTE: Esperar un poco antes de desmarcar para evitar race conditions
         setTimeout(() => {
           cargandoDesdeSupabase.current = false;
         }, 1000);
@@ -203,15 +195,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       console.log('⏸️ Sincronización pausada: cargando desde Supabase');
       return;
     }
-
+    
     if (!usandoSupabase || !supabase) return;
 
     try {
       console.log('📤 Sincronizando con Supabase...');
-
-      // Subir alumnos
+      
       if (datos.alumnos.length > 0) {
-        const alumnosParaSubir = datos.alumnos.map(a => ({
+        const alumnosParaSubir = datos.alumnos.map((a) => ({
           id: a.id,
           nombre: a.nombre,
           apellido: a.apellido,
@@ -235,9 +226,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         console.log(`✅ ${alumnosParaSubir.length} alumnos sincronizados`);
       }
 
-      // Subir actividades
       if (datos.actividades.length > 0) {
-        const actividadesParaSubir = datos.actividades.map(a => ({
+        const actividadesParaSubir = datos.actividades.map((a) => ({
           id: a.id,
           titulo: a.titulo,
           fecha: a.fecha,
@@ -272,13 +262,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       firstRun.current = false;
       return;
     }
-
+    
     // 🔥 No guardar si estamos cargando desde Supabase
     if (cargandoDesdeSupabase.current) {
       console.log('⏸️ Guardado automático pausado: cargando desde Supabase');
       return;
     }
-
+    
     setGuardando(true);
     const t = setTimeout(async () => {
       saveLocal(db);
@@ -292,8 +282,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         await subirDatosASupabase(db);
         setSincronizando(false);
       }
-    }, 1000); // 🔥 Aumentado a 1 segundo para evitar múltiples triggers
-
+    }, 1000); // 🔥 Aumentado a 1 segundo
+    
     return () => clearTimeout(t);
   }, [db, usandoSupabase]);
 
@@ -376,7 +366,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         try {
           const { data: alumnosData } = await supabase.from('alumnos').select('*');
           const { data: actividadesData } = await supabase.from('actividades').select('*');
-
+          
           if (alumnosData && actividadesData) {
             const dbDesdeSupabase: DB = {
               alumnos: alumnosData.map((a: any) => ({
